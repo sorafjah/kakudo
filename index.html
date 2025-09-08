@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角度学習アプリ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            touch-action: none; /* Prevent scrolling on touch devices when dragging */
+        }
+        .tab-button.active {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-4">かくどを まなぼう！</h1>
+
+        <!-- Mode Selection Tabs -->
+        <div class="flex justify-center border-b-2 border-gray-200 mb-6">
+            <button id="explore-mode-btn" class="tab-button text-lg font-bold py-3 px-6 text-gray-600 hover:bg-blue-100 rounded-t-lg transition-colors duration-300">さわってみよう</button>
+            <button id="compare-mode-btn" class="tab-button text-lg font-bold py-3 px-6 text-gray-600 hover:bg-blue-100 rounded-t-lg transition-colors duration-300">くらべてみよう</button>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="app-content">
+            <!-- Explore Mode Content -->
+            <div id="explore-mode" class="hidden">
+                <p class="text-center text-gray-600 mb-4 text-lg">みどりの点をドラッグして、かくどを かえてみよう。</p>
+                <div class="flex flex-col items-center">
+                    <canvas id="explore-canvas" width="400" height="400" class="bg-blue-50 rounded-lg cursor-pointer shadow-inner"></canvas>
+                    <p class="text-6xl font-bold text-blue-600 mt-4"><span id="explore-angle-value">90</span>°</p>
+                </div>
+            </div>
+
+            <!-- Compare Mode Content -->
+            <div id="compare-mode" class="hidden">
+                <p class="text-center text-gray-600 mb-4 text-lg">どちらの かくどが おおきいかな？</p>
+                <div class="flex flex-col md:flex-row justify-around items-center gap-6">
+                    <!-- Angle 1 -->
+                    <div class="flex flex-col items-center">
+                        <canvas id="compare-canvas-1" width="250" height="250" class="bg-gray-50 rounded-lg shadow-inner"></canvas>
+                        <p id="compare-angle-value-1" class="text-4xl font-bold text-gray-700 mt-2 opacity-0 transition-opacity duration-500"></p>
+                        <button id="select-angle-1" class="mt-2 bg-pink-500 text-white font-bold py-3 px-8 rounded-full hover:bg-pink-600 transition-transform transform hover:scale-105 text-lg">こっちがおおきい</button>
+                    </div>
+                    <!-- Angle 2 -->
+                    <div class="flex flex-col items-center">
+                        <canvas id="compare-canvas-2" width="250" height="250" class="bg-gray-50 rounded-lg shadow-inner"></canvas>
+                        <p id="compare-angle-value-2" class="text-4xl font-bold text-gray-700 mt-2 opacity-0 transition-opacity duration-500"></p>
+                        <button id="select-angle-2" class="mt-2 bg-sky-500 text-white font-bold py-3 px-8 rounded-full hover:bg-sky-600 transition-transform transform hover:scale-105 text-lg">こっちがおおきい</button>
+                    </div>
+                </div>
+                <div id="feedback-area" class="text-center mt-6">
+                    <p id="feedback-text" class="text-3xl font-bold h-10"></p>
+                    <button id="next-question-btn" class="mt-2 bg-green-500 text-white font-bold py-3 px-10 rounded-full hover:bg-green-600 transition-transform transform hover:scale-105 text-lg hidden">つぎのもんだい</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- DOM Element References ---
+    const exploreModeBtn = document.getElementById('explore-mode-btn');
+    const compareModeBtn = document.getElementById('compare-mode-btn');
+    const exploreModeDiv = document.getElementById('explore-mode');
+    const compareModeDiv = document.getElementById('compare-mode');
+
+    // Explore Mode Elements
+    const exploreCanvas = document.getElementById('explore-canvas');
+    const exploreAngleValue = document.getElementById('explore-angle-value');
+    const exploreCtx = exploreCanvas.getContext('2d');
+
+    // Compare Mode Elements
+    const compareCanvas1 = document.getElementById('compare-canvas-1');
+    const compareCtx1 = compareCanvas1.getContext('2d');
+    const compareCanvas2 = document.getElementById('compare-canvas-2');
+    const compareCtx2 = compareCanvas2.getContext('2d');
+    const selectAngle1Btn = document.getElementById('select-angle-1');
+    const selectAngle2Btn = document.getElementById('select-angle-2');
+    const compareAngleValue1 = document.getElementById('compare-angle-value-1');
+    const compareAngleValue2 = document.getElementById('compare-angle-value-2');
+    const feedbackText = document.getElementById('feedback-text');
+    const nextQuestionBtn = document.getElementById('next-question-btn');
+
+    // --- State Variables ---
+    let currentMode = 'explore';
+    let exploreAngle = 90;
+    let isDragging = false;
+    let compareAngle1 = 0;
+    let compareAngle2 = 0;
+
+    // --- Drawing Logic ---
+    function drawAngle(ctx, angle, radius, center) {
+        const radians = (angle + 180) * Math.PI / 180; // 9時の位置を0度とするための調整
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        // 基準線を引く（左方向）
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        ctx.lineTo(center.x - radius, center.y);
+        ctx.strokeStyle = '#9ca3af'; // gray-400
+        ctx.lineWidth = 5;
+        ctx.stroke();
+
+        // 動く線を引く
+        const endX = center.x + radius * Math.cos(radians);
+        const endY = center.y + radius * Math.sin(radians);
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        ctx.lineTo(endX, endY);
+        ctx.strokeStyle = '#10b981'; // emerald-500
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        
+        // 角度を示す円弧を引く
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        // 円弧の開始角度はPI（9時）、終了角度は計算されたラジアン
+        ctx.arc(center.x, center.y, radius * 0.3, Math.PI, radians);
+        ctx.fillStyle = 'rgba(52, 211, 153, 0.3)';
+        ctx.fill();
+
+        // 中心点を描く
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, 8, 0, 2 * Math.PI);
+        ctx.fillStyle = '#059669'; // emerald-600
+        ctx.fill();
+        
+        // 動く線の上にドラッグ用のハンドルを描く
+        if (ctx.canvas.id === 'explore-canvas') {
+            ctx.beginPath();
+            ctx.arc(endX, endY, 15, 0, 2 * Math.PI);
+            ctx.fillStyle = '#10b981'; // emerald-500
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(endX, endY, 15, 0, 2 * Math.PI);
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+        }
+    }
+
+    // --- Mode Setup ---
+    function setupExploreMode() {
+        currentMode = 'explore';
+        exploreModeDiv.classList.remove('hidden');
+        compareModeDiv.classList.add('hidden');
+        exploreModeBtn.classList.add('active');
+        compareModeBtn.classList.remove('active');
+        updateExploreView();
+    }
+
+    function setupCompareMode() {
+        currentMode = 'compare';
+        compareModeDiv.classList.remove('hidden');
+        exploreModeDiv.classList.add('hidden');
+        compareModeBtn.classList.add('active');
+        exploreModeBtn.classList.remove('active');
+        generateNewQuestion();
+    }
+
+    // --- Explore Mode Logic ---
+    function updateExploreView() {
+        const radius = exploreCanvas.width * 0.4;
+        const center = { x: exploreCanvas.width / 2, y: exploreCanvas.height / 2 };
+        drawAngle(exploreCtx, exploreAngle, radius, center);
+        exploreAngleValue.textContent = Math.round(exploreAngle);
+    }
+
+    function handleInteraction(e) {
+        if (!isDragging && e.type !== 'mousedown' && e.type !== 'touchstart') return;
+        
+        const rect = exploreCanvas.getBoundingClientRect();
+        const x = (e.clientX || e.touches[0].clientX) - rect.left;
+        const y = (e.clientY || e.touches[0].clientY) - rect.top;
+        const center = { x: exploreCanvas.width / 2, y: exploreCanvas.height / 2 };
+
+        const dx = x - center.x;
+        const dy = y - center.y;
+        
+        let angle = Math.atan2(dy, dx) * 180 / Math.PI; // -180から180までの角度
+        angle += 180; // 9時の位置（atan2=180）が新しい0になるように範囲をずらす
+        if (angle >= 360) {
+             angle -= 360;
+        }
+        
+        if (angle > 359) angle = 359; // 360/0でのちらつきを防ぐために359で止める
+        
+        exploreAngle = angle;
+        updateExploreView();
+    }
+
+    // --- Compare Mode Logic ---
+    function generateNewQuestion() {
+        // Generate two distinct random angles
+        compareAngle1 = Math.floor(Math.random() * 160) + 10; // 10-170
+        do {
+            compareAngle2 = Math.floor(Math.random() * 160) + 10;
+        } while (Math.abs(compareAngle1 - compareAngle2) < 20); // Ensure they are not too close
+
+        // Reset UI
+        feedbackText.textContent = '';
+        nextQuestionBtn.classList.add('hidden');
+        selectAngle1Btn.disabled = false;
+        selectAngle2Btn.disabled = false;
+        selectAngle1Btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        selectAngle2Btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        compareAngleValue1.classList.add('opacity-0');
+        compareAngleValue2.classList.add('opacity-0');
+
+        // Draw new angles
+        const radius = compareCanvas1.width * 0.4;
+        const center1 = { x: compareCanvas1.width / 2, y: compareCanvas1.height / 2 };
+        const center2 = { x: compareCanvas2.width / 2, y: compareCanvas2.height / 2 };
+        drawAngle(compareCtx1, compareAngle1, radius, center1);
+        drawAngle(compareCtx2, compareAngle2, radius, center2);
+    }
+
+    function checkAnswer(selectedAngle) {
+        selectAngle1Btn.disabled = true;
+        selectAngle2Btn.disabled = true;
+        selectAngle1Btn.classList.add('opacity-50', 'cursor-not-allowed');
+        selectAngle2Btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+        const isCorrect = (selectedAngle === 1 && compareAngle1 > compareAngle2) || (selectedAngle === 2 && compareAngle2 > compareAngle1);
+        
+        if (isCorrect) {
+            feedbackText.textContent = 'せいかい！すごい！';
+            feedbackText.className = 'text-3xl font-bold h-10 text-green-500';
+        } else {
+            feedbackText.textContent = 'おしい！ちがうかな？';
+            feedbackText.className = 'text-3xl font-bold h-10 text-red-500';
+        }
+        
+        // Reveal angle values
+        compareAngleValue1.textContent = `${Math.round(compareAngle1)}°`;
+        compareAngleValue2.textContent = `${Math.round(compareAngle2)}°`;
+        compareAngleValue1.classList.remove('opacity-0');
+        compareAngleValue2.classList.remove('opacity-0');
+
+        nextQuestionBtn.classList.remove('hidden');
+    }
+
+    // --- Event Listeners ---
+    exploreModeBtn.addEventListener('click', setupExploreMode);
+    compareModeBtn.addEventListener('click', setupCompareMode);
+
+    // Explore canvas listeners
+    exploreCanvas.addEventListener('mousedown', (e) => { isDragging = true; handleInteraction(e); });
+    document.addEventListener('mousemove', (e) => { if (isDragging) handleInteraction(e); });
+    document.addEventListener('mouseup', () => { isDragging = false; });
+    exploreCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); isDragging = true; handleInteraction(e); });
+    document.addEventListener('touchmove', (e) => { e.preventDefault(); if (isDragging) handleInteraction(e); });
+    document.addEventListener('touchend', () => { isDragging = false; });
+
+    // Compare button listeners
+    selectAngle1Btn.addEventListener('click', () => checkAnswer(1));
+    selectAngle2Btn.addEventListener('click', () => checkAnswer(2));
+    nextQuestionBtn.addEventListener('click', generateNewQuestion);
+    
+    // --- Initial Setup ---
+    window.onload = () => {
+        setupExploreMode();
+    };
+
+</script>
+</body>
+</html>
+
