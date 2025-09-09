@@ -3,276 +3,270 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>角度学習アプリ</title>
+    <title>角度比較プリント</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'M PLUS Rounded 1c', sans-serif;
-            touch-action: none; /* Prevent scrolling on touch devices when dragging */
+        /* 印刷用のスタイル */
+        @media print {
+            .no-print {
+                display: none;
+            }
+            @page {
+                size: A4;
+                margin: 20mm;
+            }
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background-color: white !important;
+                padding: 0 !important;
+            }
+            #printable-area {
+               box-shadow: none !important;
+               border: none !important;
+               border-radius: 0 !important;
+            }
         }
-        .tab-button.active {
-            background-color: #3b82f6; /* blue-500 */
-            color: white;
+        .printable-area {
+            width: 210mm;
+            box-sizing: border-box;
         }
     </style>
 </head>
-<body class="bg-slate-100 flex flex-col items-center justify-center min-h-screen p-4">
-
-    <div class="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6">
-        <h1 class="text-3xl font-bold text-center text-gray-800 mb-4">かくどを まなぼう！</h1>
-
-        <!-- Mode Selection Tabs -->
-        <div class="flex justify-center border-b-2 border-gray-200 mb-6">
-            <button id="explore-mode-btn" class="tab-button text-lg font-bold py-3 px-6 text-gray-600 hover:bg-blue-100 rounded-t-lg transition-colors duration-300">さわってみよう</button>
-            <button id="compare-mode-btn" class="tab-button text-lg font-bold py-3 px-6 text-gray-600 hover:bg-blue-100 rounded-t-lg transition-colors duration-300">くらべてみよう</button>
-        </div>
-
-        <!-- Main Content Area -->
-        <div id="app-content">
-            <!-- Explore Mode Content -->
-            <div id="explore-mode" class="hidden">
-                <p class="text-center text-gray-600 mb-4 text-lg">みどりの点をドラッグして、かくどを かえてみよう。</p>
-                <div class="flex flex-col items-center">
-                    <canvas id="explore-canvas" width="400" height="400" class="bg-blue-50 rounded-lg cursor-pointer shadow-inner"></canvas>
-                    <p class="text-6xl font-bold text-blue-600 mt-4"><span id="explore-angle-value">90</span>°</p>
+<body class="bg-gray-100 flex flex-col items-center p-8 font-sans">
+    
+    <!-- 操作パネル（印刷時には非表示） -->
+    <div class="controls no-print mb-8 p-6 bg-white rounded-lg shadow-md w-full border" style="max-width: 210mm;">
+        <div class="flex items-end justify-between gap-x-8">
+            <!-- 左側: 設定 -->
+            <div class="flex flex-col space-y-4 flex-grow">
+                <!-- 角度 -->
+                <div class="flex items-center space-x-3">
+                   <label for="angle-select" class="font-medium text-gray-700 whitespace-nowrap w-20">角度:</label>
+                   <select id="angle-select" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 w-full">
+                       <option value="set">(30°, 45°, 60°, 90°, 120°, 180°)</option>
+                       <option value="free180" selected>フリー (180°まで)</option>
+                       <option value="free360">フリー (360°まで)</option>
+                   </select>
+                </div>
+                <div class="flex items-center justify-between">
+                    <!-- 問題数 -->
+                    <div class="flex items-center space-x-3">
+                        <label class="font-medium text-gray-700 w-20">問題数:</label>
+                        <div class="flex items-center">
+                            <button id="decrement-btn" class="w-8 h-8 bg-gray-200 text-gray-700 font-bold rounded-l-md hover:bg-gray-300">-</button>
+                            <span id="num-problems-value" class="font-bold text-blue-600 text-lg w-10 h-8 text-center bg-gray-100 flex items-center justify-center">8</span>
+                            <button id="increment-btn" class="w-8 h-8 bg-gray-200 text-gray-700 font-bold rounded-r-md hover:bg-gray-300">+</button>
+                        </div>
+                    </div>
+                     <!-- 3時から -->
+                    <div class="flex items-center space-x-3">
+                        <label for="start-at-three-toggle" class="font-medium text-gray-700 whitespace-nowrap">3時から:</label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="start-at-three-toggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-300 peer-checked:bg-blue-600"></div>
+                            <span class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-full"></span>
+                        </label>
+                    </div>
                 </div>
             </div>
-
-            <!-- Compare Mode Content -->
-            <div id="compare-mode" class="hidden">
-                <p class="text-center text-gray-600 mb-4 text-lg">どちらの かくどが おおきいかな？</p>
-                <div class="flex flex-col md:flex-row justify-around items-center gap-6">
-                    <!-- Angle 1 -->
-                    <div class="flex flex-col items-center">
-                        <canvas id="compare-canvas-1" width="250" height="250" class="bg-gray-50 rounded-lg shadow-inner"></canvas>
-                        <p id="compare-angle-value-1" class="text-4xl font-bold text-gray-700 mt-2 opacity-0 transition-opacity duration-500"></p>
-                        <button id="select-angle-1" class="mt-2 bg-pink-500 text-white font-bold py-3 px-8 rounded-full hover:bg-pink-600 transition-transform transform hover:scale-105 text-lg">こっちがおおきい</button>
-                    </div>
-                    <!-- Angle 2 -->
-                    <div class="flex flex-col items-center">
-                        <canvas id="compare-canvas-2" width="250" height="250" class="bg-gray-50 rounded-lg shadow-inner"></canvas>
-                        <p id="compare-angle-value-2" class="text-4xl font-bold text-gray-700 mt-2 opacity-0 transition-opacity duration-500"></p>
-                        <button id="select-angle-2" class="mt-2 bg-sky-500 text-white font-bold py-3 px-8 rounded-full hover:bg-sky-600 transition-transform transform hover:scale-105 text-lg">こっちがおおきい</button>
-                    </div>
-                </div>
-                <div id="feedback-area" class="text-center mt-6">
-                    <p id="feedback-text" class="text-3xl font-bold h-10"></p>
-                    <button id="next-question-btn" class="mt-2 bg-green-500 text-white font-bold py-3 px-10 rounded-full hover:bg-green-600 transition-transform transform hover:scale-105 text-lg hidden">つぎのもんだい</button>
-                </div>
+            <!-- 右側: ボタン -->
+            <div class="flex space-x-3">
+                 <button id="generate-btn" class="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-colors">
+                    作成
+                </button>
+                <button id="toggle-answers-btn" class="px-4 py-3 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-75 transition-colors">
+                    答え
+                </button>
+                <button onclick="window.print()" class="px-4 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 transition-colors">
+                    印刷
+                </button>
             </div>
         </div>
     </div>
 
-<script>
-    // --- DOM Element References ---
-    const exploreModeBtn = document.getElementById('explore-mode-btn');
-    const compareModeBtn = document.getElementById('compare-mode-btn');
-    const exploreModeDiv = document.getElementById('explore-mode');
-    const compareModeDiv = document.getElementById('compare-mode');
-
-    // Explore Mode Elements
-    const exploreCanvas = document.getElementById('explore-canvas');
-    const exploreAngleValue = document.getElementById('explore-angle-value');
-    const exploreCtx = exploreCanvas.getContext('2d');
-
-    // Compare Mode Elements
-    const compareCanvas1 = document.getElementById('compare-canvas-1');
-    const compareCtx1 = compareCanvas1.getContext('2d');
-    const compareCanvas2 = document.getElementById('compare-canvas-2');
-    const compareCtx2 = compareCanvas2.getContext('2d');
-    const selectAngle1Btn = document.getElementById('select-angle-1');
-    const selectAngle2Btn = document.getElementById('select-angle-2');
-    const compareAngleValue1 = document.getElementById('compare-angle-value-1');
-    const compareAngleValue2 = document.getElementById('compare-angle-value-2');
-    const feedbackText = document.getElementById('feedback-text');
-    const nextQuestionBtn = document.getElementById('next-question-btn');
-
-    // --- State Variables ---
-    let currentMode = 'explore';
-    let exploreAngle = 90;
-    let isDragging = false;
-    let compareAngle1 = 0;
-    let compareAngle2 = 0;
-
-    // --- Drawing Logic ---
-    function drawAngle(ctx, angle, radius, center) {
-        const radians = (angle + 180) * Math.PI / 180; // 9時の位置を0度とするための調整
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-        // 基準線を引く（左方向）
-        ctx.beginPath();
-        ctx.moveTo(center.x, center.y);
-        ctx.lineTo(center.x - radius, center.y);
-        ctx.strokeStyle = '#9ca3af'; // gray-400
-        ctx.lineWidth = 5;
-        ctx.stroke();
-
-        // 動く線を引く
-        const endX = center.x + radius * Math.cos(radians);
-        const endY = center.y + radius * Math.sin(radians);
-        ctx.beginPath();
-        ctx.moveTo(center.x, center.y);
-        ctx.lineTo(endX, endY);
-        ctx.strokeStyle = '#10b981'; // emerald-500
-        ctx.lineWidth = 5;
-        ctx.lineCap = 'round';
-        ctx.stroke();
+    <!-- 印刷範囲 -->
+    <div id="printable-area" class="printable-area bg-white p-12 rounded-lg shadow-xl border">
+        <header class="mb-8 flex justify-between items-center">
+            <h1 class="text-2xl font-normal">角の大きさをしらべよう</h1>
+            <p class="text-xl font-normal">なまえ（　　　　　　　　　）</p>
+        </header>
         
-        // 角度を示す円弧を引く
-        ctx.beginPath();
-        ctx.moveTo(center.x, center.y);
-        // 円弧の開始角度はPI（9時）、終了角度は計算されたラジアン
-        ctx.arc(center.x, center.y, radius * 0.3, Math.PI, radians);
-        ctx.fillStyle = 'rgba(52, 211, 153, 0.3)';
-        ctx.fill();
+        <main id="worksheet-body">
+            <!-- 問題はここに動的に生成されます -->
+        </main>
+    </div>
 
-        // 中心点を描く
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, 8, 0, 2 * Math.PI);
-        ctx.fillStyle = '#059669'; // emerald-600
-        ctx.fill();
-        
-        // 動く線の上にドラッグ用のハンドルを描く
-        if (ctx.canvas.id === 'explore-canvas') {
-            ctx.beginPath();
-            ctx.arc(endX, endY, 15, 0, 2 * Math.PI);
-            ctx.fillStyle = '#10b981'; // emerald-500
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(endX, endY, 15, 0, 2 * Math.PI);
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 4;
-            ctx.stroke();
-        }
-    }
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const worksheetBody = document.getElementById('worksheet-body');
+            const generateBtn = document.getElementById('generate-btn');
+            const toggleAnswersBtn = document.getElementById('toggle-answers-btn');
+            
+            const numProblemsValue = document.getElementById('num-problems-value');
+            const incrementBtn = document.getElementById('increment-btn');
+            const decrementBtn = document.getElementById('decrement-btn');
+            const startAtThreeToggle = document.getElementById('start-at-three-toggle');
+            const angleSelect = document.getElementById('angle-select');
 
-    // --- Mode Setup ---
-    function setupExploreMode() {
-        currentMode = 'explore';
-        exploreModeDiv.classList.remove('hidden');
-        compareModeDiv.classList.add('hidden');
-        exploreModeBtn.classList.add('active');
-        compareModeBtn.classList.remove('active');
-        updateExploreView();
-    }
+            let problemData = []; // { angle, rotation }
+            let answersVisible = false;
+            let numProblems = 8;
+            const MIN_PROBLEMS = 1;
+            const MAX_PROBLEMS = 20;
 
-    function setupCompareMode() {
-        currentMode = 'compare';
-        compareModeDiv.classList.remove('hidden');
-        exploreModeDiv.classList.add('hidden');
-        compareModeBtn.classList.add('active');
-        exploreModeBtn.classList.remove('active');
-        generateNewQuestion();
-    }
+            numProblemsValue.textContent = numProblems;
 
-    // --- Explore Mode Logic ---
-    function updateExploreView() {
-        const radius = exploreCanvas.width * 0.4;
-        const center = { x: exploreCanvas.width / 2, y: exploreCanvas.height / 2 };
-        drawAngle(exploreCtx, exploreAngle, radius, center);
-        exploreAngleValue.textContent = Math.round(exploreAngle);
-    }
+            incrementBtn.addEventListener('click', () => {
+                if (numProblems < MAX_PROBLEMS) {
+                    numProblems++;
+                    numProblemsValue.textContent = numProblems;
+                }
+            });
+            decrementBtn.addEventListener('click', () => {
+                if (numProblems > MIN_PROBLEMS) {
+                    numProblems--;
+                    numProblemsValue.textContent = numProblems;
+                }
+            });
+            
+            // 配列をシャッフルする関数 (Fisher-Yates algorithm)
+            function shuffleArray(array) {
+                let currentIndex = array.length,  randomIndex;
+                while (currentIndex != 0) {
+                    randomIndex = Math.floor(Math.random() * currentIndex);
+                    currentIndex--;
+                    [array[currentIndex], array[randomIndex]] = [
+                        array[randomIndex], array[currentIndex]];
+                }
+                return array;
+            }
 
-    function handleInteraction(e) {
-        if (!isDragging && e.type !== 'mousedown' && e.type !== 'touchstart') return;
-        
-        const rect = exploreCanvas.getBoundingClientRect();
-        const x = (e.clientX || e.touches[0].clientX) - rect.left;
-        const y = (e.clientY || e.touches[0].clientY) - rect.top;
-        const center = { x: exploreCanvas.width / 2, y: exploreCanvas.height / 2 };
+            function drawAngle(canvasId, angle, rotation) {
+                try {
+                    const canvas = document.getElementById(canvasId);
+                    if (!canvas || !canvas.getContext) return;
+                    
+                    const ctx = canvas.getContext('2d');
+                    const radius = canvas.width * 0.4;
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    const radians = angle * Math.PI / 180;
+                    const rotationRadians = rotation * Math.PI / 180;
 
-        const dx = x - center.x;
-        const dy = y - center.y;
-        
-        let angle = Math.atan2(dy, dx) * 180 / Math.PI; // -180から180までの角度
-        angle += 180; // 9時の位置（atan2=180）が新しい0になるように範囲をずらす
-        if (angle >= 360) {
-             angle -= 360;
-        }
-        
-        if (angle > 359) angle = 359; // 360/0でのちらつきを防ぐために359で止める
-        
-        exploreAngle = angle;
-        updateExploreView();
-    }
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    ctx.save();
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(rotationRadians);
+                    ctx.translate(-centerX, -centerY);
 
-    // --- Compare Mode Logic ---
-    function generateNewQuestion() {
-        // Generate two distinct random angles
-        compareAngle1 = Math.floor(Math.random() * 160) + 10; // 10-170
-        do {
-            compareAngle2 = Math.floor(Math.random() * 160) + 10;
-        } while (Math.abs(compareAngle1 - compareAngle2) < 20); // Ensure they are not too close
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.lineTo(centerX + radius, centerY);
+                    ctx.moveTo(centerX, centerY);
+                    ctx.lineTo(centerX + radius * Math.cos(-radians), centerY + radius * Math.sin(-radians));
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
 
-        // Reset UI
-        feedbackText.textContent = '';
-        nextQuestionBtn.classList.add('hidden');
-        selectAngle1Btn.disabled = false;
-        selectAngle2Btn.disabled = false;
-        selectAngle1Btn.classList.remove('opacity-50', 'cursor-not-allowed');
-        selectAngle2Btn.classList.remove('opacity-50', 'cursor-not-allowed');
-        compareAngleValue1.classList.add('opacity-0');
-        compareAngleValue2.classList.add('opacity-0');
+                    // 0度の場合は円弧を描画しない
+                    if (angle > 0) {
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, radius / 3, -radians, 0);
+                        ctx.strokeStyle = '#3b82f6';
+                        ctx.lineWidth = 2.5;
+                        ctx.stroke();
+                    }
 
-        // Draw new angles
-        const radius = compareCanvas1.width * 0.4;
-        const center1 = { x: compareCanvas1.width / 2, y: compareCanvas1.height / 2 };
-        const center2 = { x: compareCanvas2.width / 2, y: compareCanvas2.height / 2 };
-        drawAngle(compareCtx1, compareAngle1, radius, center1);
-        drawAngle(compareCtx2, compareAngle2, radius, center2);
-    }
+                    ctx.restore();
+                } catch (e) {
+                    console.error(`Error drawing angle on ${canvasId}:`, e);
+                }
+            }
 
-    function checkAnswer(selectedAngle) {
-        selectAngle1Btn.disabled = true;
-        selectAngle2Btn.disabled = true;
-        selectAngle1Btn.classList.add('opacity-50', 'cursor-not-allowed');
-        selectAngle2Btn.classList.add('opacity-50', 'cursor-not-allowed');
+            function generateProblems() {
+                try {
+                    if (!worksheetBody) return;
+                    worksheetBody.innerHTML = '';
+                    problemData = [];
+                    answersVisible = false;
+                    toggleAnswersBtn.textContent = '答え';
+                    
+                    worksheetBody.className = 'grid grid-cols-2 gap-x-12 gap-y-12';
 
-        const isCorrect = (selectedAngle === 1 && compareAngle1 > compareAngle2) || (selectedAngle === 2 && compareAngle2 > compareAngle1);
-        
-        if (isCorrect) {
-            feedbackText.textContent = 'せいかい！すごい！';
-            feedbackText.className = 'text-3xl font-bold h-10 text-green-500';
-        } else {
-            feedbackText.textContent = 'おしい！ちがうかな？';
-            feedbackText.className = 'text-3xl font-bold h-10 text-red-500';
-        }
-        
-        // Reveal angle values
-        compareAngleValue1.textContent = `${Math.round(compareAngle1)}°`;
-        compareAngleValue2.textContent = `${Math.round(compareAngle2)}°`;
-        compareAngleValue1.classList.remove('opacity-0');
-        compareAngleValue2.classList.remove('opacity-0');
+                    const useRandomRotation = !startAtThreeToggle.checked;
+                    
+                    const angleSelection = angleSelect.value;
+                    const basicSet = [30, 45, 60, 90, 120, 180];
+                    
+                    let shuffledSet = [];
+                    if (angleSelection === 'set') {
+                        shuffledSet = shuffleArray([...basicSet]);
+                    }
 
-        nextQuestionBtn.classList.remove('hidden');
-    }
 
-    // --- Event Listeners ---
-    exploreModeBtn.addEventListener('click', setupExploreMode);
-    compareModeBtn.addEventListener('click', setupCompareMode);
+                    for (let i = 1; i <= numProblems; i++) {
+                        let angle;
+                        
+                        if (angleSelection === 'free180') {
+                            angle = Math.floor(Math.random() * 170) + 10;
+                        } else if (angleSelection === 'free360') {
+                            angle = Math.floor(Math.random() * 350) + 10;
+                        } else if (angleSelection === 'set') {
+                            // 6問目まではシャッフルしたセットから順に出題
+                            if (i <= shuffledSet.length) {
+                                angle = shuffledSet[i - 1];
+                            } else {
+                                // 7問目以降はランダムに選択
+                                angle = basicSet[Math.floor(Math.random() * basicSet.length)];
+                            }
+                        }
 
-    // Explore canvas listeners
-    exploreCanvas.addEventListener('mousedown', (e) => { isDragging = true; handleInteraction(e); });
-    document.addEventListener('mousemove', (e) => { if (isDragging) handleInteraction(e); });
-    document.addEventListener('mouseup', () => { isDragging = false; });
-    exploreCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); isDragging = true; handleInteraction(e); });
-    document.addEventListener('touchmove', (e) => { e.preventDefault(); if (isDragging) handleInteraction(e); });
-    document.addEventListener('touchend', () => { isDragging = false; });
+                        const rotation = useRandomRotation ? Math.floor(Math.random() * 360) : 0;
 
-    // Compare button listeners
-    selectAngle1Btn.addEventListener('click', () => checkAnswer(1));
-    selectAngle2Btn.addEventListener('click', () => checkAnswer(2));
-    nextQuestionBtn.addEventListener('click', generateNewQuestion);
-    
-    // --- Initial Setup ---
-    window.onload = () => {
-        setupExploreMode();
-    };
+                        problemData.push({ angle, rotation });
 
-</script>
+                        const problemDiv = document.createElement('div');
+                        problemDiv.className = 'flex flex-col items-center relative';
+                        problemDiv.innerHTML = `
+                            <span class="absolute top-0 left-0 text-base font-normal text-gray-700">${i}.</span>
+                            <canvas id="canvas-${i}" width="280" height="280"></canvas>
+                            <p class="mt-1 text-lg font-mono answer-box" id="answer-${i}">（　　）</p>
+                        `;
+                        worksheetBody.appendChild(problemDiv);
+
+                        drawAngle(`canvas-${i}`, angle, rotation);
+                    }
+                } catch (e) {
+                    console.error("Error generating problems:", e);
+                    worksheetBody.innerHTML = '<p class="text-red-500">問題の生成中にエラーが発生しました。</p>';
+                }
+            }
+            
+            function toggleAnswers() {
+                answersVisible = !answersVisible;
+                toggleAnswersBtn.textContent = answersVisible ? '答えを隠す' : '答え';
+
+                problemData.forEach((data, index) => {
+                    const i = index + 1;
+                    const answerBox = document.getElementById(`answer-${i}`);
+                    if (!answerBox) return;
+                    
+                    if (answersVisible) {
+                        answerBox.innerHTML = `（ <span class="text-red-500 font-bold">${data.angle}°</span> ）`;
+                    } else {
+                        answerBox.textContent = '（　　）';
+                    }
+                });
+            }
+
+            generateBtn.addEventListener('click', generateProblems);
+            toggleAnswersBtn.addEventListener('click', toggleAnswers);
+
+            generateProblems();
+        });
+    </script>
 </body>
 </html>
 
