@@ -232,7 +232,7 @@
                         problemDiv.innerHTML = `
                             <span class="absolute top-0 left-0 text-base font-normal text-gray-700">${i}.</span>
                             <canvas id="canvas-${i}" width="280" height="280"></canvas>
-                            <p class="mt-1 text-lg font-mono answer-box" id="answer-${i}">（　　）</p>
+                            <p class="mt-1 text-lg font-mono answer-box" id="answer-${i}">（　　　　）</p>
                         `;
                         worksheetBody.appendChild(problemDiv);
 
@@ -256,7 +256,7 @@
                     if (answersVisible) {
                         answerBox.innerHTML = `（ <span class="text-red-500 font-bold">${data.angle}°</span> ）`;
                     } else {
-                        answerBox.textContent = '（　　）';
+                        answerBox.textContent = '（　　　　）';
                     }
                 });
             }
