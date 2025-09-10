@@ -193,7 +193,8 @@
                     answersVisible = false;
                     toggleAnswersBtn.textContent = '答え';
                     
-                    worksheetBody.className = 'grid grid-cols-2 gap-x-12 gap-y-8';
+                    // 行間を狭めるために gap-y-4 に変更
+                    worksheetBody.className = 'grid grid-cols-2 gap-x-12 gap-y-4';
 
                     const useRandomRotation = !startAtThreeToggle.checked;
                     
