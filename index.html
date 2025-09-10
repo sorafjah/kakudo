@@ -86,8 +86,8 @@
     </div>
 
     <!-- 印刷範囲 -->
-    <div id="printable-area" class="printable-area bg-white p-12 rounded-lg shadow-xl border">
-        <header class="mb-8 flex justify-between items-center">
+    <div id="printable-area" class="printable-area bg-white p-8 rounded-lg shadow-xl border">
+        <header class="mb-6 flex justify-between items-center">
             <h1 class="text-2xl font-normal">角の大きさをしらべよう</h1>
             <p class="text-xl font-normal">なまえ（　　　　　　　　　）</p>
         </header>
@@ -193,7 +193,7 @@
                     answersVisible = false;
                     toggleAnswersBtn.textContent = '答え';
                     
-                    worksheetBody.className = 'grid grid-cols-2 gap-x-12 gap-y-12';
+                    worksheetBody.className = 'grid grid-cols-2 gap-x-12 gap-y-8';
 
                     const useRandomRotation = !startAtThreeToggle.checked;
                     
@@ -231,7 +231,7 @@
                         problemDiv.className = 'flex flex-col items-center relative';
                         problemDiv.innerHTML = `
                             <span class="absolute top-0 left-0 text-base font-normal text-gray-700">${i}.</span>
-                            <canvas id="canvas-${i}" width="280" height="280"></canvas>
+                            <canvas id="canvas-${i}" width="260" height="260"></canvas>
                             <p class="mt-1 text-lg font-mono answer-box" id="answer-${i}">（　　　　）</p>
                         `;
                         worksheetBody.appendChild(problemDiv);
